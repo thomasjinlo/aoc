@@ -6,7 +6,13 @@ import (
 	"log"
 	"os"
 	"strconv"
+    "sort"
 )
+
+type Elf struct {
+    id int
+    calories int
+}
 
 func main() {
 	input, err := os.Open("input.txt")
@@ -16,30 +22,34 @@ func main() {
 
     bufScanner := bufio.NewScanner(input)
 
-    var (
-        maxCalories int
-        numCalories int
-    )
+    elf := &Elf{id: 0, calories: 0}
+    elves := []*Elf{}
+    elves = append(elves, elf)
 
     for bufScanner.Scan() {
         text := bufScanner.Text()
 
         if text == "" {
-            numCalories = 0
+            elf = &Elf{id: elf.id + 1, calories: 0}
+            elves = append(elves, elf)
             continue
         }
 
-        intCalories, err := strconv.Atoi(text)
+        calories, err := strconv.Atoi(text)
         if err != nil {
             log.Fatal(err)
         }
 
-        numCalories = numCalories + intCalories
-
-        if numCalories > maxCalories {
-            maxCalories = numCalories 
-        }
+        elf.calories = elf.calories + calories
     }
 
-    fmt.Println(maxCalories)
+    sort.Slice(elves, func(i, j int) bool {
+        return elves[i].calories > elves[j].calories
+    })
+
+    totalCalories := 0
+    for _, elf := range elves[:3] {
+        totalCalories = totalCalories + elf.calories
+    }
+    fmt.Println(totalCalories)
 }
