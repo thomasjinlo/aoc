@@ -7,73 +7,103 @@ import (
 	"os"
 )
 
+const (
+    A = 65
+    B = 66
+    C = 67
+    X   = 88
+    Y = 89
+    Z = 90
+)
+
+type rpsScorer interface {
+    calculateWinningScore(elfMove, myMove uint8) int
+    calculateFreeScore (move uint8) int
+}
+
+type naiveScorer struct {}
+
+func (s *naiveScorer) calculateWinningScore(elfMove, myMove uint8) int {
+    calculateScore := map[uint8]map[uint8]int{
+        A: {
+            X: 3,
+            Y: 6,
+            Z: 0,
+        },
+        B: {
+            X: 0,
+            Y: 3,
+            Z: 6,
+        },
+        C: {
+            X: 6,
+            Y: 0,
+            Z: 3,
+        },
+    }
+
+    return calculateScore[elfMove][myMove]
+}
+
+func (s *naiveScorer) calculateFreeScore(move uint8) int {
+    calculateFreeScore := map[uint8]int{
+        X: 1,
+        Y: 2,
+        Z: 3,
+    }
+
+    return calculateFreeScore[move]
+}
+
+type smartScorer struct {}
+
+func (s *smartScorer) calculateWinningScore(elfMove, myMove uint8) int {
+    calculateScore := map[uint8]map[uint8]int{
+        A: {
+            X: 3,
+            Y: 1,
+            Z: 2,
+        },
+        B: {
+            X: 1,
+            Y: 2,
+            Z: 3,
+        },
+        C: {
+            X: 2,
+            Y: 3,
+            Z: 1,
+        },
+    }
+
+    return calculateScore[elfMove][myMove]
+}
+
+func (s *smartScorer) calculateFreeScore(move uint8) int {
+    calculateFreeScore := map[uint8]int{
+        X: 0,
+        Y: 3,
+        Z: 6,
+    }
+
+    return calculateFreeScore[move]
+}
+
 func main() {
     input, err := os.Open("input.txt")
     if err != nil {
         log.Fatal("input.txt")
     }
 
-    const (
-        elfRock = 65
-        elfPaper = 66
-        elfScissor = 67
-        shouldLose   = 88
-        shouldDraw = 89
-        shouldWin = 90
-    )
-
     totalScore := 0
-    // calculateScore := map[uint8]map[uint8]int{
-    //     elfRock: {
-    //         myRock: 3,
-    //         myPaper: 6,
-    //         myScissor: 0,
-    //     },
-    //     elfPaper: {
-    //         myRock: 0,
-    //         myPaper: 3,
-    //         myScissor: 6,
-    //     },
-    //     elfScissor: {
-    //         myRock: 6,
-    //         myPaper: 0,
-    //         myScissor: 3,
-    //     },
-    // }
-    // calculateFreeScore := map[uint8]int{
-    //     myRock: 1,
-    //     myPaper: 2,
-    //     myScissor: 3,
-    // }
+    scorer := smartScorer{}
 
-    calculateScore := map[uint8]map[uint8]int{
-        elfRock: {
-            shouldLose: 3,
-            shouldDraw: 1,
-            shouldWin: 2,
-        },
-        elfPaper: {
-            shouldLose: 1,
-            shouldDraw: 2,
-            shouldWin: 3,
-        },
-        elfScissor: {
-            shouldLose: 2,
-            shouldDraw: 3,
-            shouldWin: 1,
-        },
-    }
-    calculateFreeScore := map[uint8]int{
-        shouldLose: 0,
-        shouldDraw: 3,
-        shouldWin: 6,
-    }
     for bufScanner := bufio.NewScanner(input); bufScanner.Scan(); {
         moves := bufScanner.Text()
         elfMove, myMove := moves[0], moves[2]
 
-        totalScore += calculateFreeScore[myMove]
-        totalScore += calculateScore[elfMove][myMove]
+        totalScore += scorer.calculateFreeScore(myMove)
+        totalScore += scorer.calculateWinningScore(elfMove, myMove)
     }
 
     fmt.Println(totalScore)
