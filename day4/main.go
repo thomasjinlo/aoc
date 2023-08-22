@@ -5,9 +5,41 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"regexp"
 	"strconv"
-	"strings"
 )
+
+type Range struct {
+    Start int
+    End int
+}
+
+func NewRange(start, end int) Range {
+    return Range{
+        Start: start,
+        End: end,
+    }
+}
+
+type Overlapper interface {
+    Overlap(r1, r2 Range) bool
+}
+
+type OverlapperFunc func(r1, r2 Range) bool
+
+func (f OverlapperFunc) Overlap(r1, r2 Range) bool {
+    return f(r1, r2)
+}
+
+func FullOverlap(r1, r2 Range) bool {
+    return ((r1.Start <= r2.Start && r1.End >= r2.End) ||
+            (r2.Start <= r1.Start && r2.End >= r1.End ))
+}
+
+func PartialOverlap(r1, r2 Range) bool {
+    return (r1.Start <= r2.End && r2.Start <= r1.End) ||
+           (r2.Start <= r1.End && r1.Start <= r2.End)
+}
 
 func main() {
     file, err := os.Open("input.txt")
@@ -19,22 +51,22 @@ func main() {
     for bufScanner := bufio.NewScanner(file); bufScanner.Scan(); {
         line := bufScanner.Text()
 
-        ranges := strings.Split(line, ",")
+        matchDigits := `\d+`
+        re := regexp.MustCompile(matchDigits)
+        digits := re.FindAllString(line, -1)
+        numbers := []int{}
 
-        firstRange := strings.Split(ranges[0], "-")
-        secondRange := strings.Split(ranges[1], "-")
-
-        firstStart, _ := strconv.Atoi(firstRange[0])
-        firstEnd, _ := strconv.Atoi(firstRange[1])
-        secondStart, _ := strconv.Atoi(secondRange[0])
-        secondEnd, _ := strconv.Atoi(secondRange[1])
-
-        if firstStart <= secondStart && firstEnd >= secondEnd {
-            overlap ++
-            continue
+        for _, digit := range digits {
+            if number, err := strconv.Atoi(digit); err == nil {
+                numbers = append(numbers, number)
+            }
         }
 
-        if secondStart <= firstStart && secondEnd >= firstEnd {
+        range1 := NewRange(numbers[0], numbers[1])
+        range2 := NewRange(numbers[2], numbers[3])
+
+        doesOverlap := OverlapperFunc(PartialOverlap)
+        if doesOverlap(range1, range2) {
             overlap ++
         }
     }
