@@ -9,6 +9,33 @@ import (
 	"strconv"
 )
 
+type CrateMover interface {
+    Move(stacks *[]string, numCrates, from, to int)
+}
+
+type CrateMoverFunc func(stacks *[]string, numCrates, from, to int)
+
+func (f CrateMoverFunc) Move(stacks *[]string, numCrates, from, to int) {
+    f(stacks, numCrates, from, to)
+}
+
+func Crate9000Mover(stacks *[]string, numCrates, from, to int) {
+    derefStacks := (*stacks)
+    crates := ""
+    for _, crate := range derefStacks[from][len(derefStacks[from])-numCrates:] {
+        crates = string(crate) + crates
+    }
+    derefStacks[from] = derefStacks[from][:len(derefStacks[from])-numCrates]
+    derefStacks[to] += crates
+}
+
+func Crate9001Mover(stacks *[]string, numCrates, from, to int) {
+    derefStacks := (*stacks)
+    crates := derefStacks[from][len(derefStacks[from])-numCrates:]
+    derefStacks[from] = derefStacks[from][:len(derefStacks[from])-numCrates]
+    derefStacks[to] += crates
+}
+
 func main() {
     file, err := os.Open("input.txt")
     if err != nil {
@@ -59,19 +86,16 @@ func main() {
         from, _ := strconv.Atoi(digits[1])
         to, _ := strconv.Atoi(digits[2])
 
-        crates := ""
-        for _, crate := range stacks[from-1][len(stacks[from-1])-numCrates:] {
-            crates = string(crate) + crates
-        }
-        stacks[from-1] = stacks[from-1][:len(stacks[from-1])-numCrates]
-        stacks[to-1] += crates
+
+        crateMoverFunc := CrateMoverFunc(Crate9001Mover)
+        crateMoverFunc.Move(&stacks, numCrates, from-1, to-1)
     }
 
     result := ""
 
     for _, stack := range stacks {
         i := len(stack) - 1
-        result = result + stack[i:i+1]
+        result = result + string(stack[i])
     }
 
     fmt.Println(result)
