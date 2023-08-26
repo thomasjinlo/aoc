@@ -13,7 +13,17 @@ func (e *MarkerNotFoundError) Error() string {
     return "Unable to find marker"
 }
 
-func findMarker(line string) (int, error) {
+type MarkerFinder interface {
+    FindMarker(line string) (int, error)
+}
+
+type MarkerFinderFunc func(line string) (int, error)
+
+func (f MarkerFinderFunc) FindMarker(line string) (int, error) {
+    return f(line)
+}
+
+func findContiguousUniqChars(line string, uniqCount int) (int, error) {
     charSet := map[byte]bool {}
 
     for i, j := 0, 0; i < len(line); i++ {
@@ -27,12 +37,20 @@ func findMarker(line string) (int, error) {
 
         charSet[line[i]] = true
 
-        if (i - j) == 3 {
+        if (i - j) == uniqCount {
             return i + 1, nil
         }
     }
 
     return 0, &MarkerNotFoundError{}
+}
+
+func PacketMarkerFinder(line string) (int, error) {
+    return findContiguousUniqChars(line, 3)
+}
+
+func MessageMarkerFinder(line string) (int, error) {
+    return findContiguousUniqChars(line, 13)
 }
 
 func main() {
@@ -41,10 +59,12 @@ func main() {
 		log.Fatal(err)
 	}
 
+    markerFinder := MarkerFinderFunc(MessageMarkerFinder)
+
 	for bufScanner := bufio.NewScanner(file); bufScanner.Scan(); {
 		line := bufScanner.Text()
 
-        marker, err := findMarker(line)
+        marker, err := markerFinder.FindMarker(line)
         if err == nil {
             fmt.Println(marker)
         }
