@@ -81,11 +81,29 @@ func main() {
         curDir.AccSize(size)
 	}
 
-    totalSize := 0
+    //totalSize := 0
+    //for _, dir := range directories {
+    //    if dir.GetSize() <= 100000 {
+    //        totalSize += dir.GetSize()
+    //    }
+    //}
+    //fmt.Println(totalSize)
+
+    freeSpace := 70000000 - rootDir.GetSize()
+    spaceNeeded := 30000000 - freeSpace
+    deleteDirSize := 70000000000000000
+
     for _, dir := range directories {
-        if dir.GetSize() <= 100000 {
-            totalSize += dir.GetSize()
+        dirSize := dir.GetSize()
+
+        if dirSize < spaceNeeded {
+            continue
+        }
+
+        if dirSize < deleteDirSize {
+            deleteDirSize = dirSize
         }
     }
-    fmt.Println(totalSize)
+
+    fmt.Println(deleteDirSize)
 }
