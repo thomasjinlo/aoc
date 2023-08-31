@@ -50,6 +50,66 @@ func isTreeVisibleHoriz(i, j int, grid Grid) bool {
     return isVisibleLeft || isVisibleRight
 }
 
+func numTreesVisibleTop(i, j int, grid Grid) int {
+    height := grid[i][j]
+    treesVisible := 0
+
+    for i := i - 1; i >= 0; i-- {
+        treesVisible++
+
+        if grid[i][j] >= height {
+            return treesVisible
+        }
+    }
+
+    return treesVisible
+}
+
+func numTreesVisibleBot(i, j int, grid Grid) int {
+    height := grid[i][j]
+    treesVisible := 0
+
+    for i := i + 1; i < len(grid); i++ {
+        treesVisible++
+
+        if grid[i][j] >= height {
+            return treesVisible
+        }
+    }
+
+    return treesVisible
+}
+
+func numTreesVisibleLeft(i, j int, grid Grid) int {
+    height := grid[i][j]
+    treesVisible := 0
+
+    for j := j - 1; j >= 0; j-- {
+        treesVisible++
+
+        if grid[i][j] >= height {
+            return treesVisible
+        }
+    }
+
+    return treesVisible
+}
+
+func numTreesVisibleRight(i, j int, grid Grid) int {
+    height := grid[i][j]
+    treesVisible := 0
+
+    for j := j + 1; j < len(grid[0]); j++ {
+        treesVisible++
+
+        if grid[i][j] >= height {
+            return treesVisible
+        }
+    }
+
+    return treesVisible
+}
+
 func isTreeVisible(i, j int, grid Grid) bool {
     return isTreeVisibleVert(i, j, grid) || isTreeVisibleHoriz(i, j, grid)
 }
@@ -74,15 +134,17 @@ func main() {
     }
 
     N, M := len(grid), len(grid[0])
-    treesVisible := N * 2 + M * 2 - 4
 
-    for i := 1; i < N - 1; i++ {
-        for j := 1; j < M - 1; j++ {
-            if isTreeVisible(i, j, grid) {
-                treesVisible ++
+    maxTreesVisible := 0
+
+    for i := 0; i < N; i++ {
+        for j := 0; j < M; j++ {
+            treesVisible := numTreesVisibleBot(i, j, grid) * numTreesVisibleTop(i, j, grid) * numTreesVisibleLeft(i, j, grid) * numTreesVisibleRight(i, j, grid)
+            if treesVisible > maxTreesVisible {
+                maxTreesVisible = treesVisible
             }
         }
     }
 
-    fmt.Println(treesVisible)
+    fmt.Println(maxTreesVisible)
 }
