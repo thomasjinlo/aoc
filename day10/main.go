@@ -32,17 +32,42 @@ func ExtractSignal(signal string) CpuSignal {
 }
 
 type VideoDevice struct {
+    cycleClock int
     registerX int
+    image []string
     registerXCycles []int
+}
+
+func (v *VideoDevice) processCycle() {
+    v.registerXCycles = append(v.registerXCycles, v.registerX)
+
+    if len(v.image[len(v.image)-1]) == 40 {
+        v.image = append(v.image, "")
+    }
+
+    pixelIdx := v.cycleClock - ((len(v.image) - 1) * 40)
+    if pixelIdx >= v.registerX - 1 && pixelIdx <= v.registerX + 1 {
+        v.image[len(v.image)-1] += "#"
+    } else {
+        v.image[len(v.image)-1] += "."
+    }
+
+    v.cycleClock++
+}
+
+func (v *VideoDevice) DrawImage() {
+    for _, imageRow := range v.image {
+        fmt.Println(imageRow)
+    }
 }
 
 func (v *VideoDevice) ProcessCpuSignal(signal CpuSignal) {
     switch signal.instruction {
     case NOOP:
-        v.registerXCycles = append(v.registerXCycles, v.registerX)
+        v.processCycle()
     case ADDX:
-        v.registerXCycles = append(v.registerXCycles, v.registerX)
-        v.registerXCycles = append(v.registerXCycles, v.registerX)
+        v.processCycle()
+        v.processCycle()
         v.registerX += signal.xValue
     }
 }
@@ -61,7 +86,11 @@ func (v *VideoDevice) getRegisterX(cycle int) int {
 }
 
 func NewVideoDevice() *VideoDevice {
-    return &VideoDevice{registerX: 1, registerXCycles: []int{1}}
+    return &VideoDevice{
+        registerX: 1,
+        registerXCycles: []int{1},
+        image: []string{""},
+    }
 }
 
 func partOne() {
@@ -78,6 +107,21 @@ func partOne() {
     fmt.Println(videoDevice.SignalStrength())
 }
 
+func partTwo() {
+    inputs := make(chan string)
+    go utils.ScanInputs("input.txt", inputs)
+
+    videoDevice := NewVideoDevice()
+
+    for line := range inputs {
+        cpuSignal := ExtractSignal(line)
+        videoDevice.ProcessCpuSignal(cpuSignal)
+    }
+
+    videoDevice.DrawImage()
+}
+
 func main() {
-    partOne()
+    //partOne()
+    partTwo()
 }
