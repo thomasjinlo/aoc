@@ -17,89 +17,99 @@ const (
     LEFT Direction = "L"
 )
 
-type Snapshot string
-
 type Position struct {
     x int
     y int
     next *Position
-    prev *Position
-    snapshots []Snapshot
+    snapshots map[string]bool
 }
 
 func (p *Position) Snapshot() {
-    p.snapshots = append(p.snapshots, Snapshot(fmt.Sprintf("%d,%d", p.x, p.y)))
+    p.snapshots[fmt.Sprintf("%d,%d", p.x, p.y)] = true
 }
 
-func (p *Position) Move(direction Direction) {
-    switch direction {
-    case UP:
-        p.x--
-    case DOWN:
-        p.x++
-    case RIGHT:
-        p.y++
-    case LEFT:
-        p.y--
-    }
-    p.Snapshot()
-}
-
-func (p *Position) Follow(prev *Position, direction Direction) {
-    if math.Abs(float64(p.x - prev.x)) == 2 {
-        p.y = prev.y
-    }
-
-    if math.Abs(float64(p.y - prev.y)) == 2 {
-        p.x = prev.x
-    }
-
-    p.Move(direction)
+func absDiff(x, y int) int {
+    return int(math.Abs(float64(x - y)))
 }
 
 func (p *Position) IsAdjacent(p2 *Position) bool {
-    // horizontally or vertically adjacent
     if p.x == p2.x || p.y == p2.y {
-        return math.Abs(float64(p.x - p2.x)) + math.Abs(float64(p.y - p2.y)) <= 1
+        return absDiff(p.x, p2.x) + absDiff(p.y, p2.y) <= 1
     }
 
-    // diagonally adjacent
-    return math.Abs(float64(p.x - p2.x)) + math.Abs(float64(p.y - p2.y)) <= 2
+    return absDiff(p.x, p2.x) + absDiff(p.y, p2.y) <= 2
+}
+
+func (p *Position) Move(x, y int) {
+    p.x, p.y = x, y
+    p.Snapshot()
+    
+    p2 := p.next
+    if p2 == nil {
+        return
+    }
+
+    if p.IsAdjacent(p2) {
+        return
+    }
+
+    dx, dy := 0, 0
+    if p.x == p2.x || p.y == p2.y {
+        dx, dy = (p.x - p2.x)/2, (p.y - p2.y)/2
+    } else {
+        if absDiff(p.x, p2.x) == 2 {
+            dx = (p.x - p2.x)/2
+        } else {
+            dx = p.x - p2.x
+        }
+
+        if absDiff(p.y, p2.y) == 2 {
+            dy = (p.y - p2.y)/2
+        } else {
+            dy = p.y - p2.y
+        }
+    }
+
+    p2.Move(p2.x + dx, p2.y + dy)
 }
 
 type Rope struct {
-    positions []*Position
-}
-
-func NewRope(numPos int) *Rope {
-    positions := make([]*Position, numPos)
-    for i := range positions {
-        positions[i] = &Position{}
-    }
-    return &Rope{positions: positions}
+    head *Position
+    tail *Position
 }
 
 func (r *Rope) Move(direction Direction, distance int) {
-    for head, j := r.positions[0], 0; j < distance; j++ {
-        prev := head
-        head.Move(direction)
-
-        for _, pos := range r.positions[1:] {
-            if pos.IsAdjacent(prev) {
-                continue
-            }
-
-            pos.Follow(prev, direction)
-            prev = pos
+    for j := 0; j < distance; j++ {
+        dx, dy := r.head.x, r.head.y
+        switch direction {
+        case UP:
+            dx--
+        case DOWN:
+            dx++
+        case RIGHT:
+            dy++
+        case LEFT:
+            dy--
         }
+        r.head.Move(dx, dy)
     }
+}
+
+func NewRope(numPos int) *Rope {
+    head := &Position{snapshots: make(map[string]bool)}
+    prev := head
+    for i := 1; i < numPos; i++ {
+        prev.next = &Position{snapshots: make(map[string]bool)}
+        prev = prev.next
+    }
+    return &Rope{head: head, tail: prev}
 }
 
 func main() {
     inputs := make(chan string)
     go utils.ScanInputs("input.txt", inputs)
 
-    knots := 2
+    knots := 10
     rope := NewRope(knots)
 
     for line := range inputs {
@@ -110,14 +120,5 @@ func main() {
         rope.Move(direction, distance)
     }
 
-    uniqCount := 1
-    snapshotSet := map[Snapshot]bool{}
-    for _, snapshot := range rope.positions[knots-1].snapshots {
-        if _, ok := snapshotSet[snapshot]; !ok {
-            snapshotSet[snapshot] = true
-            uniqCount++
-        }
-    }
-
-    fmt.Println(uniqCount)
+    fmt.Println(len(rope.tail.snapshots) + 1)
 }
