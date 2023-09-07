@@ -3,79 +3,142 @@ package main
 import (
 	"aoc/utils"
 	"fmt"
-//  "regexp"
-//	"strconv"
-//	"strings"
+	"regexp"
+	"strings"
+	// "strconv"
+	// "strings"
 )
 
 type Monkey struct {
     id int
     inspectCount int
+    inspectOperation string
+    inspectNumber int
+    divisibleNumber int
+    monkeyIdFalse int
+    monkeyIdTrue int
     startingItems []int
-    operation func(int) int
-    test func(int) bool
-    testTrue int
-    testFalse int
+    useItemReflection bool
 }
 
 func (m *Monkey) InspectItems (monkeys map[int]*Monkey) {
     for _, item := range m.startingItems {
         m.inspectCount += 1
-        newItem := m.operation(item)
-        newItem = newItem / 3
-        passTest := m.test(newItem)
+        newItem := m.inspect(item)
 
-        if passTest {
-            monkeys[m.testTrue].startingItems = append(monkeys[m.testTrue].startingItems, newItem)
+        if passTest := m.test(newItem); passTest {
+            monkeys[m.monkeyIdTrue].AddItem(newItem)
         } else {
-            monkeys[m.testFalse].startingItems = append(monkeys[m.testFalse].startingItems, newItem)
+            monkeys[m.monkeyIdFalse].AddItem(newItem)
         }
     }
 
     m.startingItems = []int{}
 }
 
+func (m *Monkey) inspect(item int) int {
+    inspectNumber := m.inspectNumber
+    if m.useItemReflection {
+        inspectNumber = item
+    }
+
+
+    newItem := 0
+    switch string(m.inspectOperation) {
+    case "+":
+        newItem = item + inspectNumber
+    case "*":
+        newItem = item * inspectNumber
+    }
+
+    return newItem / 3
+}
+
+func (m *Monkey) test(item int) bool {
+    return item % m.divisibleNumber == 0
+}
+
+func (m *Monkey) AddItem(item int) {
+    m.startingItems = append(m.startingItems, item)
+}
+
+func (m *Monkey) AddInspectOperation(operation string) {
+    m.inspectOperation = operation
+}
+
+func (m *Monkey) AddInspectNumber(number int) {
+    m.inspectNumber = number
+}
+
+func (m *Monkey) UseItemReflection() {
+    m.useItemReflection = true
+}
+
+func (m *Monkey) AddDivisibleNumber(number int) {
+    m.divisibleNumber = number
+}
+
+func (m *Monkey) AddMonkeyIdTrue(id int) {
+    m.monkeyIdTrue = id
+}
+
+func (m *Monkey) AddMonkeyIdFalse(id int) {
+    m.monkeyIdFalse = id
+}
+
 func partOne() {
     inputs := make(chan string)
-    go utils.ScanInputs("sampleInput.txt", inputs)
+    go utils.ScanInputs("input.txt", inputs)
 
-    monkey0 := &Monkey{
-        id: 0,
-        startingItems: []int{79, 98},
-        operation: func(item int) int { return item * 19 },
-        test: func(item int) bool { return item % 23 == 0 },
-        testTrue: 2,
-        testFalse: 3,
-    }
-    monkey1 := &Monkey{
-        id: 1,
-        startingItems: []int{54, 65, 75, 74},
-        operation: func(item int) int { return item + 6 },
-        test: func(item int) bool { return item % 19 == 0 },
-        testTrue: 2,
-        testFalse: 0,
-    }
-    monkey2 := &Monkey{
-        id: 2,
-        startingItems: []int{79, 60, 97},
-        operation: func(item int) int { return item * item },
-        test: func(item int) bool { return item % 13 == 0 },
-        testTrue: 1,
-        testFalse: 3,
-    }
-    monkey3 := &Monkey{
-        id: 3,
-        startingItems: []int{74},
-        operation: func(item int) int { return item + 3 },
-        test: func(item int) bool { return item % 17 == 0 },
-        testTrue: 0,
-        testFalse: 1,
-    }
-    monkeys := map[int]*Monkey{
-        0: monkey0,
-        1: monkey1,
-        2: monkey2,
-        3: monkey3,
+    monkeys := map[int]*Monkey{}
+    monkeyIdRegex := regexp.MustCompile(`Monkey (\d+):`)
+    startingItemsRegex := regexp.MustCompile(`Starting items: (.+)`)
+    operationRegex := regexp.MustCompile(`Operation: new = old (.+)`)
+    testDivisionRegex := regexp.MustCompile(`Test: divisible by (\d+)`)
+    monkeyIdTrueRegex := regexp.MustCompile(`If true: throw to monkey (\d+)`)
+    monkeyIdFalseRegex := regexp.MustCompile(`If false: throw to monkey (\d+)`)
+
+    var monkey *Monkey
+    for line := range inputs {
+        if len(line) == 0 {
+            continue
+        }
+
+        if match := monkeyIdRegex.FindStringSubmatch(line); len(match) > 1 {
+            monkey = &Monkey{id: utils.MustInt(match[1])}
+            monkeys[monkey.id] = monkey
+        }
+
+        if match := startingItemsRegex.FindStringSubmatch(line); len(match) > 1 {
+            startingItems := strings.Split(match[1], ", ")
+            for _, item := range startingItems {
+                monkey.AddItem(utils.MustInt(item))
+            }
+        }
+
+        if match := operationRegex.FindStringSubmatch(line); len(match) > 1 {
+            operations := strings.Split(match[1], " ")
+
+            monkey.AddInspectOperation(operations[0])
+
+            if operations[1] == "old" {
+                monkey.UseItemReflection()
+            } else {
+                monkey.AddInspectNumber(utils.MustInt(operations[1]))
+            }
+        }
+
+        if match := testDivisionRegex.FindStringSubmatch(line); len(match) > 1 {
+            monkey.AddDivisibleNumber(utils.MustInt(match[1]))
+        }
+
+        if match := monkeyIdTrueRegex.FindStringSubmatch(line); len(match) > 1 {
+            monkey.AddMonkeyIdTrue(utils.MustInt(match[1]))
+        }
+
+        if match := monkeyIdFalseRegex.FindStringSubmatch(line); len(match) > 1 {
+            monkey.AddMonkeyIdFalse(utils.MustInt(match[1]))
+        }
     }
 
     for round := 0; round < 20; round++ {
@@ -85,10 +148,17 @@ func partOne() {
         }
     }
 
+    maxInspect, nextMaxInspect := 0, 0
     for i := 0; i < len(monkeys); i++ {
         monkey := monkeys[i]
-        fmt.Println(monkey.inspectCount)
+        if monkey.inspectCount > maxInspect {
+            nextMaxInspect = maxInspect
+            maxInspect = monkey.inspectCount
+        }
     }
+
+    fmt.Println("multiplying", maxInspect, nextMaxInspect)
+    fmt.Println(maxInspect * nextMaxInspect)
 }
 
 func main() {
